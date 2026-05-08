@@ -9,7 +9,7 @@
 English README: [README.MD](./README.MD)
 
 ## 接入方式
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.aleyn97/navigation3-helper)](https://github.com/aleyn97/navigation3-helper)
+![Maven Central Version](https://img.shields.io/maven-central/v/io.github.aleyn97/navigation3-helper)
 
 
 ### 纯 Android 模块

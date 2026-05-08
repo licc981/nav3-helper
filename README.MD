@@ -9,7 +9,7 @@ Kotlin Multiplatform navigation helper focused on:
 中文文档: [README_ZH.md](./README_ZH.md)
 
 ## Installation
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.aleyn97/navigation3-helper)](https://github.com/aleyn97/navigation3-helper)
+![Maven Central Version](https://img.shields.io/maven-central/v/io.github.aleyn97/navigation3-helper)
 
 ### Android-only module
 
