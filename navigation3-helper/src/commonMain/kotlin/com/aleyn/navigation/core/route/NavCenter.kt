@@ -104,21 +104,17 @@ object NavCenter {
 
     fun resolve(url: String): NavScreen? {
         val finalUrl = interceptedUrl(url) ?: return null
-        return findNavScreen(finalUrl) ?: handleRouteNotFound(finalUrl)
-    }
-
-    fun findNavScreen(url: String): NavScreen? {
-        val parsedRouteUrl = parseRouteUrl(url)
+        val parsedRouteUrl = parseRouteUrl(finalUrl)
         routeRegistryIndex[parsedRouteUrl.routeKey]?.let { registry ->
-            return registry.resolve(parsedRouteUrl)
+            return registry.resolve(parsedRouteUrl) ?: handleRouteNotFound(finalUrl)
         }
 
         routePatternRegistrations.forEach { registration ->
             val matchedRoute = matchRoutePattern(registration.route, parsedRouteUrl)
                 ?: return@forEach
-            return registration.registry.resolve(matchedRoute)
+            return registration.registry.resolve(matchedRoute) ?: handleRouteNotFound(finalUrl)
         }
-        return null
+        return handleRouteNotFound(finalUrl)
     }
 
     fun navigate(url: String): Boolean {
@@ -140,17 +136,17 @@ object NavCenter {
     }
 
     fun goBack(url: String, inclusive: Boolean = false): Boolean {
-        val nav = findNavScreen(url) ?: return false
+        val nav = resolve(url) ?: return false
         return goBack(nav, inclusive)
     }
 
     fun replace(url: String): Boolean {
-        val nav = findNavScreen(url) ?: return false
+        val nav = resolve(url) ?: return false
         return replace(nav)
     }
 
     fun remove(url: String): Boolean {
-        val nav = findNavScreen(url) ?: return false
+        val nav = resolve(url) ?: return false
         return remove(nav)
     }
 
