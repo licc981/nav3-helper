@@ -9,7 +9,9 @@ Kotlin Multiplatform navigation helper focused on:
 中文文档: [README_ZH.md](./README_ZH.md)
 
 ## Installation
-![Maven Central Version](https://img.shields.io/maven-central/v/io.github.aleyn97/navigation3-helper)
+![Maven Central Version](https://img.shields.io/maven-central/v/io.github.licc981/navigation3-helper)
+
+Maintainer release instructions: [PUBLISHING.md](./PUBLISHING.md)
 
 ### Android-only module
 
@@ -17,8 +19,8 @@ If you use a plain Android/Kotlin module instead of KMP, use the Android KSP con
 
 ```kotlin
 dependencies {
-    implementation("io.github.aleyn97:navigation3-helper:<version>")
-    ksp("io.github.aleyn97:nav3-ksp-compiler:<version>")
+    implementation("io.github.licc981:navigation3-helper:<version>")
+    ksp("io.github.licc981:nav3-ksp-compiler:<version>")
 }
 ```
 
@@ -54,8 +56,8 @@ Add the runtime and KSP compiler:
 
 ```kotlin
 dependencies {
-    implementation("io.github.aleyn97:navigation3-helper:<version>")
-    add("kspCommonMainMetadata", "io.github.aleyn97:nav3-ksp-compiler:<version>")
+    implementation("io.github.licc981:navigation3-helper:<version>")
+    add("kspCommonMainMetadata", "io.github.licc981:nav3-ksp-compiler:<version>")
 }
 ```
 
@@ -63,10 +65,10 @@ If your project has platform-specific KSP tasks, also add the compiler to those 
 
 ```kotlin
 dependencies {
-    add("kspAndroid", "io.github.aleyn97:nav3-ksp-compiler:<version>")
-    add("kspIosX64", "io.github.aleyn97:nav3-ksp-compiler:<version>")
-    add("kspIosArm64", "io.github.aleyn97:nav3-ksp-compiler:<version>")
-    add("kspIosSimulatorArm64", "io.github.aleyn97:nav3-ksp-compiler:<version>")
+    add("kspAndroid", "io.github.licc981:nav3-ksp-compiler:<version>")
+    add("kspIosX64", "io.github.licc981:nav3-ksp-compiler:<version>")
+    add("kspIosArm64", "io.github.licc981:nav3-ksp-compiler:<version>")
+    add("kspIosSimulatorArm64", "io.github.licc981:nav3-ksp-compiler:<version>")
 }
 ```
 

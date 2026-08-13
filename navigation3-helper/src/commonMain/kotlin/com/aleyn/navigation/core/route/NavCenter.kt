@@ -111,8 +111,32 @@ object NavCenter {
     }
 
     fun goBack(): Boolean {
-        backStack ?: return false
-        backStack?.goBack()
+        val host = backStack ?: return false
+        host.goBack()
+        return true
+    }
+
+    fun goBack(direction: NavScreen, inclusive: Boolean = false): Boolean {
+        val host = backStack ?: return false
+        host.goBack(direction, inclusive)
+        return true
+    }
+
+    fun replace(direction: NavScreen): Boolean {
+        val host = backStack ?: return false
+        host.replace(direction)
+        return true
+    }
+
+    fun remove(direction: NavScreen): Boolean {
+        val host = backStack ?: return false
+        host.remove(direction)
+        return true
+    }
+
+    fun resetToStart(): Boolean {
+        val host = backStack ?: return false
+        host.resetToStart()
         return true
     }
 

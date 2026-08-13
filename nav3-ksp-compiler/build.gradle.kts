@@ -23,7 +23,7 @@ kotlin {
     }
 }
 
-group = "io.github.aleyn97"
+group = "io.github.licc981"
 version = libs.versions.navHelper.get()
 
 mavenPublishing {
@@ -34,7 +34,7 @@ mavenPublishing {
         name = "nav3KspCompiler"
         description = "Kotlin Multiplatform Router compiler"
         inceptionYear = "2026"
-        url = "https://github.com/aleyn97/nav3-helper"
+        url = "https://github.com/licc981/nav3-helper"
 
         licenses {
             license {
@@ -46,20 +46,20 @@ mavenPublishing {
 
         developers {
             developer {
-                id = "aleyn"
-                name = "Aleyn Developer"
-                url = "https://github.com/aleyn97"
-                email = "pclckk@gmail.com"
+                id = "licc981"
+                name = "lcc"
+                url = "https://github.com/licc981"
+                email = "lccbyxy@163.com"
                 organization = "personal"
-                organizationUrl = "https://github.com/aleyn97"
+                organizationUrl = "https://github.com/licc981"
             }
         }
 
         scm {
-            url = "https://github.com/aleyn97/nav-helper"
-            connection = "scm:git:git://github.com/aleyn97/nav-helper.git"
-            developerConnection = "scm:git:ssh://git@github.com/aleyn97/nav-helper.git"
+            url = "https://github.com/licc981/nav3-helper"
+            connection = "scm:git:https://github.com/licc981/nav3-helper.git"
+            developerConnection = "scm:git:ssh://git@github.com/licc981/nav3-helper.git"
         }
     }
-    if (project.hasProperty("signing.keyId")) signAllPublications()
+    signAllPublications()
 }

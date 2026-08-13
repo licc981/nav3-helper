@@ -9,7 +9,9 @@
 English README: [README.MD](./README.MD)
 
 ## 接入方式
-![Maven Central Version](https://img.shields.io/maven-central/v/io.github.aleyn97/navigation3-helper)
+![Maven Central Version](https://img.shields.io/maven-central/v/io.github.licc981/navigation3-helper)
+
+维护者发布说明：[PUBLISHING.md](./PUBLISHING.md)
 
 
 ### 纯 Android 模块
@@ -18,8 +20,8 @@ English README: [README.MD](./README.MD)
 
 ```kotlin
 dependencies {
-    implementation("io.github.aleyn97:navigation3-helper:<version>")
-    ksp("io.github.aleyn97:nav3-ksp-compiler:<version>")
+    implementation("io.github.licc981:navigation3-helper:<version>")
+    ksp("io.github.licc981:nav3-ksp-compiler:<version>")
 }
 ```
 
@@ -56,8 +58,8 @@ fun App() {
 
 ```kotlin
 dependencies {
-    implementation("io.github.aleyn97:navigation3-helper:<version>")
-    add("kspCommonMainMetadata", "io.github.aleyn97:nav3-ksp-compiler:<version>")
+    implementation("io.github.licc981:navigation3-helper:<version>")
+    add("kspCommonMainMetadata", "io.github.licc981:nav3-ksp-compiler:<version>")
 }
 ```
 
@@ -65,10 +67,10 @@ dependencies {
 
 ```kotlin
 dependencies {
-    add("kspAndroid", "io.github.aleyn97:nav3-ksp-compiler:<version>")
-    add("kspIosX64", "io.github.aleyn97:nav3-ksp-compiler:<version>")
-    add("kspIosArm64", "io.github.aleyn97:nav3-ksp-compiler:<version>")
-    add("kspIosSimulatorArm64", "io.github.aleyn97:nav3-ksp-compiler:<version>")
+    add("kspAndroid", "io.github.licc981:nav3-ksp-compiler:<version>")
+    add("kspIosX64", "io.github.licc981:nav3-ksp-compiler:<version>")
+    add("kspIosArm64", "io.github.licc981:nav3-ksp-compiler:<version>")
+    add("kspIosSimulatorArm64", "io.github.licc981:nav3-ksp-compiler:<version>")
 }
 ```
 

@@ -1,8 +1,10 @@
 package com.aleyn.navigation
 
 import androidx.navigation3.runtime.EntryProviderScope
+import androidx.navigation3.runtime.NavBackStack
 import com.aleyn.navigation.core.intercept.InterceptResult
 import com.aleyn.navigation.core.intercept.NavUrlInterceptor
+import com.aleyn.navigation.core.navigator.NavBackStackState
 import com.aleyn.navigation.core.route.NavCenter
 import com.aleyn.navigation.core.route.NavRegistry
 import com.aleyn.navigation.core.route.NavScreen
@@ -20,6 +22,8 @@ class NavCenterTest {
     fun cleanUp() {
         NavCenter.clearInterceptors()
         NavCenter.clearRegistries()
+        attachedHost?.let(NavCenter::detachHost)
+        attachedHost = null
     }
 
     @Test
@@ -78,6 +82,47 @@ class NavCenterTest {
         NavCenter.addInterceptor { url -> InterceptResult.Redirect(url) }
 
         assertNull(NavCenter.resolve("https://www.myapp.com/public"))
+    }
+
+    @Test
+    fun stack_operations_return_false_without_an_attached_host() {
+        assertFalse(NavCenter.goBack(TestPublic))
+        assertFalse(NavCenter.replace(TestPublic))
+        assertFalse(NavCenter.remove(TestPublic))
+        assertFalse(NavCenter.resetToStart())
+    }
+
+    @Test
+    fun stack_operations_are_forwarded_to_the_attached_host() {
+        val host = attachHost()
+        val first = TestUser("active", "1")
+        val second = TestUser("active", "2")
+
+        host.navigate(first)
+        host.navigate(second)
+        assertTrue(NavCenter.goBack(first))
+        assertEquals(listOf(TestPublic, first), host.screens)
+
+        assertTrue(NavCenter.replace(second))
+        assertEquals(listOf(TestPublic, second), host.screens)
+
+        assertTrue(NavCenter.remove(second))
+        assertEquals(listOf(TestPublic), host.screens)
+
+        host.navigate(first)
+        assertTrue(NavCenter.resetToStart())
+        assertEquals(listOf(TestPublic), host.screens)
+    }
+
+    private fun attachHost(): NavBackStackState {
+        return NavBackStackState(TestPublic, NavBackStack<NavScreen>(TestPublic)).also {
+            attachedHost = it
+            NavCenter.attachHost(it)
+        }
+    }
+
+    private companion object {
+        var attachedHost: NavBackStackState? = null
     }
 }
 

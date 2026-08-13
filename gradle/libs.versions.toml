@@ -10,7 +10,7 @@ composeMultiplatform = "1.10.3"
 kotlinpoetVersion = "2.3.0"
 serializationJson = "1.11.0"
 
-navHelper = "1.0.0"
+navHelper = "1.0.1"
 
 [libraries]
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -31,8 +31,8 @@ kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlin
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
 
 
-nav3-helper = { module = "io.github.aleyn97:navigation3-helper", version.ref = "navHelper" }
-nav3-ksp-compiler = { module = "io.github.aleyn97:nav3-ksp-compiler", version.ref = "navHelper" }
+nav3-helper = { module = "io.github.licc981:navigation3-helper", version.ref = "navHelper" }
+nav3-ksp-compiler = { module = "io.github.licc981:nav3-ksp-compiler", version.ref = "navHelper" }
 
 [bundles]
 navigation3 = ["navigation3-ui", "navigation-viewmodel"]

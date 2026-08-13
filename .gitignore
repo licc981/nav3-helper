@@ -10,9 +10,14 @@ captures
 .externalNativeBuild
 .cxx
 local.properties
+publishing.properties
+.env
+.env.*
 xcuserdata/
 Pods/
 *.jks
 *.gpg
+*.key
+*.pem
 *yarn.lock
 .gradle-user
