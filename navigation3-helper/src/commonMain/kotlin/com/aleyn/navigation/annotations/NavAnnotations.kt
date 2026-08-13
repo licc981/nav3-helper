@@ -17,8 +17,8 @@ package com.aleyn.navigation.annotations
  * The library does not constrain the route protocol or naming convention. Callers may choose keys
  * such as `https://www.app.cn/user/detail`, `app://user/detail`, or `user/detail`.
  *
- * Dynamic values are passed in the runtime URL query string, for example navigating to
- * `app://user/detail?id=1&tab=post`, while the annotation route stays as `app://user/detail`.
+ * Dynamic values can be declared as complete path-segment placeholders, such as
+ * `app://user/{id}`, or passed in the runtime URL query string.
  *
  * Query restoration is intended for lightweight route data such as String, primitive values,
  * and `@Serializable` objects encoded as JSON query values. Complex or large objects should still
@@ -27,10 +27,14 @@ package com.aleyn.navigation.annotations
  *
  * When [start] is true, this screen becomes the default start destination for the module registry
  * generated from the current Kotlin module.
+ *
+ * When [needLogin] is true, the generated destination and registry metadata mark this screen as
+ * requiring authentication. Interceptors can inspect that metadata through `NavCenter.needLogin`.
  */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.FUNCTION)
 annotation class Screen(
     val route: String = "",
-    val start: Boolean = false
+    val start: Boolean = false,
+    val needLogin: Boolean = false
 )

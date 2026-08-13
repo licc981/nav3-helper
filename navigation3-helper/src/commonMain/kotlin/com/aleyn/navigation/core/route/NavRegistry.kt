@@ -16,6 +16,9 @@ interface NavRegistry {
     val routes: Set<String>
         get() = emptySet()
 
+    val loginRoutes: Set<String>
+        get() = emptySet()
+
     fun entryProvider(scope: EntryProviderScope<NavScreen>)
 
     fun resolve(parsedRouteUrl: ParsedRouteUrl): NavScreen? = null

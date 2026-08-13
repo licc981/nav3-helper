@@ -147,7 +147,9 @@ fun UserDetailScreen(id: Long) { /* ... */ }
 Navigate from any module through `NavCenter`:
 
 ```kotlin
-NavCenter.navigate("app://user/detail?id=123")
+coroutineScope.launch {
+    NavCenter.navigate("app://user/detail?id=123")
+}
 ```
 
 ### 3. `@Serializable` route parameter
@@ -170,7 +172,9 @@ Runtime navigation:
 val userInfoParam = serializeRouteQueryValue(
     UserInfo(userId = "1001", nickname = "Aleyn")
 )
-NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
+coroutineScope.launch {
+    NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
+}
 ```
 
 ### 4. Page result callback
@@ -215,7 +219,7 @@ NavDisplay(
 
 ## Route Rules
 
-`@Screen(route = ...)` declares an optional fixed route key for a page.
+`@Screen(route = ..., needLogin = ...)` declares an optional route key and login requirement.
 
 If `route` is left empty, the screen still gets a generated destination and can participate in
 ordinary local navigation, but it is not registered into `NavCenter` route resolution.
@@ -230,11 +234,9 @@ all valid styles:
 Recommended rules:
 
 - Route keys must be globally unique.
-- The annotation route is optional, but when present it must be fixed and must not contain query
-  parameters.
-- Do not use path templates such as `user/{id}`.
-- Dynamic values should be passed at runtime through the query string.
-- Query parameter names should match composable parameter names.
+- The annotation route must not contain query parameters or fragments.
+- Complete path-segment placeholders are supported, such as `users/{filter}/{id}`.
+- Path placeholder and query parameter names should match composable parameter names.
 - Route keys should stay stable and should not be coupled to function names.
 
 Route key normalization:
@@ -243,23 +245,54 @@ Route key normalization:
 - Empty path segments are ignored, so trailing slashes do not change the key.
 - Scheme and authority are normalized to lowercase.
 - If the same query key appears multiple times at runtime, the last value wins.
+- Path parameters are URL-decoded and override query parameters with the same name.
 
 Example:
 
 ```kotlin
-@Screen(route = "app://user/detail")
+@Screen(
+    route = "https://www.myapp.com/users/{filter}/{id}",
+    needLogin = true
+)
 @Composable
 fun UserDetailScreen(
-    id: Long,
-    tab: String = "post"
+    filter: String,
+    id: Long
 ) { /* ... */ }
 ```
 
 Navigate at runtime with:
 
 ```kotlin
-NavCenter.navigate("app://user/detail?id=123&tab=comment")
+coroutineScope.launch {
+    NavCenter.navigate("https://www.myapp.com/users/active/123")
+}
 ```
+
+This URL restores `filter = "active"` and `id = 123L`. `NavCenter.navigate(String)` and
+`NavCenter.resolve(String)` are suspend APIs because interceptors may perform asynchronous login
+checks or network operations.
+
+### Login and interceptors
+
+`needLogin = true` is written to both the generated destination and registry metadata. An
+interceptor can use `NavCenter.needLogin(url)` to inspect the target route:
+
+```kotlin
+NavCenter.addInterceptor { url ->
+    when {
+        NavCenter.needLogin(url) && !session.isLoggedIn() ->
+            InterceptResult.Redirect("app://login")
+        else -> InterceptResult.Proceed
+    }
+}
+```
+
+Interceptor results:
+
+- `Proceed` continues through subsequent interceptors and navigation.
+- `Block(reason)` stops navigation and does not call subsequent interceptors.
+- `Redirect(newRoute)` restarts the interceptor chain with the new route; redirect loops are blocked.
 
 Ordinary local screen:
 
@@ -298,6 +331,21 @@ Runtime behavior:
 - Nullable parameters and parameters with default values fall back naturally.
 - If a value should not come from the route, prefer loading it from inside the screen.
 
+Non-serializable parameters with defaults are treated as page-injected parameters and omitted from
+the destination. For example:
+
+```kotlin
+@Screen(route = "app://course/{courseId}")
+@Composable
+fun CourseDetailScreen(
+    courseId: String?,
+    viewModel: CourseDetailViewModel = viewModel()
+) { /* ... */ }
+```
+
+The generated `CourseDetailScreenDestination` only contains `courseId`. The generated screen call
+omits `viewModel`, so the composable's default injection expression remains responsible for it.
+
 For `@Serializable` route parameters, encode the JSON payload before appending it to the runtime
 URL query string:
 
@@ -306,7 +354,9 @@ URL query string:
 data class Filter(val tab: String, val page: Int)
 
 val filter = serializeRouteQueryValue(Filter(tab = "post", page = 2))
-NavCenter.navigate("app://user/detail?filter=$filter")
+coroutineScope.launch {
+    NavCenter.navigate("app://user/detail?filter=$filter")
+}
 ```
 
 ## Page Results

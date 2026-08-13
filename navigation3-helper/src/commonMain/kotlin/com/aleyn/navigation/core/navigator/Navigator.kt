@@ -40,6 +40,7 @@ class NavBackStackState internal constructor(
     }
 
     override fun goBack() {
+        if (entries.size <= 1) return
         entries.removeLastOrNull()
     }
 

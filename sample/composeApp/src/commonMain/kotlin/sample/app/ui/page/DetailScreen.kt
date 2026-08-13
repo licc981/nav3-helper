@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aleyn.navigation.annotations.Screen
 
 /**
@@ -14,15 +15,16 @@ import com.aleyn.navigation.annotations.Screen
  */
 
 
-@Screen(route = "https://www.app.cn/compose-app/detail")
+@Screen(route = "https://www.app.cn/users/{filter}/{id}", needLogin = true)
 @Composable
 fun DetailScreen(
-    detailId: Int = 0,
-    name: String? = null
+    filter: String,
+    id: Int,
+    detailViewModel: DetailViewModel = viewModel()
 ) {
     Box(Modifier.fillMaxSize()) {
         Text(
-            text = "DetailScreen detailId=$detailId name=$name",
+            text = "DetailScreen filter=$filter id=$id",
             modifier = Modifier.align(Alignment.Center)
         )
     }

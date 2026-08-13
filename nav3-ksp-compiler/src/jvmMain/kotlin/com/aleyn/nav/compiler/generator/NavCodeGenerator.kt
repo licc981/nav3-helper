@@ -7,6 +7,7 @@ import com.aleyn.nav.compiler.util.getDefaultValue
 import com.aleyn.navigation.core.route.NavRegistry
 import com.aleyn.navigation.core.route.NavScreen
 import com.aleyn.navigation.core.route.routeKey as normalizedRouteKey
+import com.aleyn.navigation.core.route.routePatternIdentity
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
@@ -24,6 +25,7 @@ import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
+import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.asTypeName
@@ -69,7 +71,7 @@ class NavCodeGenerator(
 
         if (screenList.isEmpty()) return
 
-        val duplicatedRoutes = routableScreens.groupingBy { normalizedRouteKey(it.route) }.eachCount()
+        val duplicatedRoutes = routableScreens.groupingBy { routePatternIdentity(it.route) }.eachCount()
             .filterValues { it > 1 }
             .keys
         if (duplicatedRoutes.isNotEmpty()) {
@@ -109,9 +111,10 @@ class NavCodeGenerator(
         val fileBuilder = FileSpec.builder(pkgName, className)
 
         val defaultValueImports = linkedSetOf<String>()
+        val navigationParameters = screen.navigationParameters(resolver)
 
         val genFunMaps = buildMap {
-            screen.funParams.forEach { parameter ->
+            navigationParameters.forEach { parameter ->
                 createScreenParameter(
                     resolver = resolver,
                     screen = screen,
@@ -138,6 +141,12 @@ class NavCodeGenerator(
                 .addSuperinterface(NavScreen::class)
                 .addAnnotation(ClassName.bestGuess("kotlinx.serialization.Serializable"))
         }
+
+        classSpec.addProperty(
+            PropertySpec.builder("needLogin", BOOLEAN, KModifier.OVERRIDE)
+                .initializer("%L", screen.needLogin)
+                .build()
+        )
 
         logger.info("gen :$pkgName.$className")
 
@@ -190,6 +199,15 @@ internal fun buildRegistryFileSpec(
     )
     classSpec.addProperty(
         PropertySpec.builder(
+            "loginRoutes",
+            ClassName("kotlin.collections", "Set").parameterizedBy(STRING),
+            KModifier.OVERRIDE
+        )
+            .initializer(buildRoutesCode(routableScreens.filter { it.needLogin }))
+            .build()
+    )
+    classSpec.addProperty(
+        PropertySpec.builder(
             "serializersModule",
             ClassName("kotlinx.serialization.modules", "SerializersModule"),
             KModifier.OVERRIDE
@@ -212,7 +230,7 @@ internal fun buildRegistryFileSpec(
             CodeBlock.builder()
                 .add("scope.entry<%T> {\n", screenClass)
                 .indent()
-                .add(buildScreenInvocationCode(model, screenContent))
+                .add(buildScreenInvocationCode(resolver, model, screenContent))
                 .unindent()
                 .add("}\n\n")
                 .build()
@@ -257,14 +275,16 @@ private fun MetaData.ScreenModel.screenContentMember(): MemberName {
 }
 
 private fun buildScreenInvocationCode(
+    resolver: Resolver,
     screen: MetaData.ScreenModel,
     screenContent: MemberName
 ): CodeBlock {
-    if (screen.funParams.isEmpty()) {
+    val navigationParameters = screen.navigationParameters(resolver)
+    if (navigationParameters.isEmpty()) {
         return CodeBlock.of("%M()\n", screenContent)
     }
 
-    val args = screen.funParams.joinToString(",\n") { parameter ->
+    val args = navigationParameters.joinToString(",\n") { parameter ->
         val name = parameter.name?.asString().orEmpty()
         "    $name = it.$name"
     }
@@ -359,11 +379,12 @@ private fun buildRouteDestinationCode(
     queryParametersName: String,
     defaultValueImports: MutableSet<String>
 ): CodeBlock {
-    if (screen.funParams.isEmpty()) {
+    val navigationParameters = screen.navigationParameters(resolver)
+    if (navigationParameters.isEmpty()) {
         return CodeBlock.of("%T", screen.generatedClassName(fileSuffix))
     }
 
-    val arguments = screen.funParams.joinToString(",\n") { parameter ->
+    val arguments = navigationParameters.joinToString(",\n") { parameter ->
         val parameterName = parameter.name?.asString().orEmpty()
         "$parameterName = ${
             routeArgumentExpression(
@@ -531,6 +552,46 @@ private fun MutableMap<ParameterSpec, PropertySpec>.createScreenParameter(
         .build()
 
     put(parameterSpec, propertySpec)
+}
+
+private fun MetaData.ScreenModel.navigationParameters(
+    resolver: Resolver
+): List<KSValueParameter> {
+    return funParams.filter { parameter ->
+        val ksType = parameter.type.resolve()
+        if (ksType.isSupportedDestinationType(resolver)) {
+            return@filter true
+        }
+
+        if (parameter.hasDefault) {
+            false
+        } else {
+            throw RuntimeException(
+                "Unsupported navigation parameter '${simpleName}(${parameter.name?.asString()}:${parameter.type.toTypeName()})'. " +
+                        "Non-serializable parameters must have a default value so generated code can omit them."
+            )
+        }
+    }
+}
+
+private fun KSType.isSupportedDestinationType(resolver: Resolver): Boolean {
+    val builtIns = resolver.builtIns
+    val notNullType = makeNotNullable()
+    val primitiveTypes = setOf(
+        builtIns.byteType,
+        builtIns.shortType,
+        builtIns.intType,
+        builtIns.longType,
+        builtIns.floatType,
+        builtIns.doubleType,
+        builtIns.charType,
+        builtIns.booleanType,
+        builtIns.stringType
+    )
+    return notNullType in primitiveTypes ||
+            builtIns.iterableType.isAssignableFrom(notNullType) ||
+            builtIns.arrayType.isAssignableFrom(notNullType) ||
+            notNullType.isKotlinxSerializableType()
 }
 
 private fun FileSpec.Builder.addImports(imports: Set<String>): FileSpec.Builder {

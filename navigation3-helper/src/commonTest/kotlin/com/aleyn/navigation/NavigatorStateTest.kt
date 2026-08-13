@@ -106,8 +106,8 @@ class NavigatorStateTest {
 
         assertEquals(detail, navigator.current)
         assertEquals(TestRoot, navigator.previous)
-        assertEquals(true, detail in navigator)
-        assertEquals(1, navigator.indexOf(detail))
+        assertEquals(true, detail in navigator.screens)
+        assertEquals(1, navigator.screens.indexOf(detail))
     }
 }
 

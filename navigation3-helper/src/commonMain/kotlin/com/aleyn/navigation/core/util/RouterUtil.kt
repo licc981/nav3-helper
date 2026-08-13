@@ -1,7 +1,7 @@
 package com.aleyn.navigation.core.util
 
 import com.aleyn.navigation.core.route.NavRegistry
-import com.aleyn.navigation.core.route.routeKey
+import com.aleyn.navigation.core.route.routePatternIdentity
 import kotlinx.serialization.modules.SerializersModule
 
 /**
@@ -17,7 +17,7 @@ fun navSerializersModule(navRegistrySet: Set<NavRegistry>): SerializersModule =
 internal fun duplicateRouteDetails(navRegistrySet: Set<NavRegistry>): Map<String, List<String>> =
     navRegistrySet
         .flatMap { registry ->
-            registry.routes.map { routeKey(it) to registry.registryName() }
+            registry.routes.map { routePatternIdentity(it) to registry.registryName() }
         }
         .groupBy(
             keySelector = { it.first },

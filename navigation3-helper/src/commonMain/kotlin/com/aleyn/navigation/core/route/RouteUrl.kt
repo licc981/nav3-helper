@@ -20,6 +20,58 @@ data class ParsedRouteUrl(
     val queryParameters: Map<String, String?>
 )
 
+/**
+ * Matches [routePattern] against [parsedRouteUrl] and merges path placeholders into the route
+ * parameters. A placeholder must occupy a complete path segment, such as `{id}`.
+ *
+ * Path parameters take precedence over query parameters with the same name.
+ */
+fun matchRoutePattern(
+    routePattern: String,
+    parsedRouteUrl: ParsedRouteUrl
+): ParsedRouteUrl? {
+    val pattern = parseRoute(routePattern)
+    val route = parseRoute(parsedRouteUrl.rawUrl)
+
+    if (!pattern.scheme.equals(route.scheme, ignoreCase = true)) return null
+    if (!pattern.authority.equals(route.authority, ignoreCase = true)) return null
+    if (pattern.pathSegments.size != route.pathSegments.size) return null
+
+    val pathParameters = buildMap {
+        pattern.pathSegments.zip(route.pathSegments).forEach { (expected, actual) ->
+            val placeholder = expected.placeholderName()
+            when {
+                placeholder != null -> put(placeholder, actual)
+                expected != actual -> return null
+            }
+        }
+    }
+
+    return parsedRouteUrl.copy(
+        routeKey = buildRouteKey(pattern),
+        queryParameters = parsedRouteUrl.queryParameters + pathParameters
+    )
+}
+
+fun routePatternMatches(routePattern: String, parsedRouteUrl: ParsedRouteUrl): Boolean {
+    return matchRoutePattern(routePattern, parsedRouteUrl) != null
+}
+
+fun routePatternIdentity(route: String): String {
+    val parsedRoute = parseRoute(route)
+    return buildRouteKey(
+        parsedRoute.copy(
+            pathSegments = parsedRoute.pathSegments.map { segment ->
+                if (segment.placeholderName() != null) "{}" else segment
+            }
+        )
+    )
+}
+
+internal fun isRoutePattern(route: String): Boolean {
+    return parseRoute(route).pathSegments.any { it.placeholderName() != null }
+}
+
 val NavRouteJson: Json = Json {
     ignoreUnknownKeys = true
 }
@@ -128,6 +180,11 @@ private fun buildRouteKey(parsedRoute: ParsedRoute): String {
         }
         append(parsedRoute.pathSegments.joinToString("/"))
     }
+}
+
+private fun String.placeholderName(): String? {
+    return takeIf { length > 2 && first() == '{' && last() == '}' }
+        ?.substring(1, lastIndex)
 }
 
 private fun parseQueryParameters(query: String): Map<String, String?> {

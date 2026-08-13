@@ -149,7 +149,9 @@ fun UserDetailScreen(id: Long) { /* ... */ }
 然后任意模块都可以通过 `NavCenter` 跳转：
 
 ```kotlin
-NavCenter.navigate("app://user/detail?id=123")
+coroutineScope.launch {
+    NavCenter.navigate("app://user/detail?id=123")
+}
 ```
 
 ### 3. `@Serializable` 路由参数
@@ -172,7 +174,9 @@ fun MeScreen(userInfo: UserInfo) { /* ... */ }
 val userInfoParam = serializeRouteQueryValue(
     UserInfo(userId = "1001", nickname = "Aleyn")
 )
-NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
+coroutineScope.launch {
+    NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
+}
 ```
 
 ### 4. 页面返回值
@@ -217,7 +221,7 @@ NavDisplay(
 
 ## 路由规则
 
-`@Screen(route = ...)` 用来声明页面的可选固定 route key。
+`@Screen(route = ..., needLogin = ...)` 用来声明页面的可选 route key 和登录要求。
 
 如果 `route` 为空，这个页面依然会生成 destination，也可以参与普通本地导航，但不会注册到 `NavCenter` 的全局路由解析中。
 
@@ -230,10 +234,9 @@ NavDisplay(
 推荐约束：
 
 - route key 必须全局唯一
-- 注解里的 route 必须是固定 key，不能带 query
-- 不要使用 `user/{id}` 这样的 path 模板
-- 动态值统一放到运行时 query 参数中
-- query 参数名尽量和 composable 参数名保持一致
+- 注解里的 route 不能带 query 或 fragment
+- 支持完整 path segment 占位符，例如 `users/{filter}/{id}`
+- path 占位符名和 query 参数名应与 composable 参数名保持一致
 - route key 应该稳定，不要直接绑定函数名
 
 ### route key 归一化规则
@@ -242,23 +245,53 @@ NavDisplay(
 - 空 path segment 会被忽略，所以尾斜杠不会改变 key
 - scheme 和 authority 会统一转成小写
 - 如果同一个 query key 重复出现，最后一个值生效
+- path 参数会进行 URL 解码，并覆盖同名 query 参数
 
 示例：
 
 ```kotlin
-@Screen(route = "app://user/detail")
+@Screen(
+    route = "https://www.myapp.com/users/{filter}/{id}",
+    needLogin = true
+)
 @Composable
 fun UserDetailScreen(
-    id: Long,
-    tab: String = "post"
+    filter: String,
+    id: Long
 ) { /* ... */ }
 ```
 
 运行时跳转：
 
 ```kotlin
-NavCenter.navigate("app://user/detail?id=123&tab=comment")
+coroutineScope.launch {
+    NavCenter.navigate("https://www.myapp.com/users/active/123")
+}
 ```
+
+上面的 URL 最终恢复为 `filter = "active"`、`id = 123L`。`NavCenter.navigate(String)` 和
+`NavCenter.resolve(String)` 都是 suspend API，因为拦截器可以执行异步登录检查或网络操作。
+
+### 登录和拦截器
+
+`needLogin = true` 会同时写入生成的 Destination 和 registry 元数据。拦截器可通过
+`NavCenter.needLogin(url)` 判断目标页面是否需要登录：
+
+```kotlin
+NavCenter.addInterceptor { url ->
+    when {
+        NavCenter.needLogin(url) && !session.isLoggedIn() ->
+            InterceptResult.Redirect("app://login")
+        else -> InterceptResult.Proceed
+    }
+}
+```
+
+拦截器返回值：
+
+- `Proceed`：继续执行后续拦截器和路由跳转
+- `Block(reason)`：阻止跳转，不再执行后续拦截器
+- `Redirect(newRoute)`：从第一条拦截器重新处理新路由；循环重定向会被阻止
 
 仅本地普通导航页面：
 
@@ -297,6 +330,20 @@ serialization 插件。
 - nullable 参数和带默认值参数会自然兜底
 - 如果某个值不应该来自 route，建议在 screen 内部自行加载
 
+不支持序列化但具有默认值的参数会被视为页面注入参数，不会写入 Destination。例如：
+
+```kotlin
+@Screen(route = "app://course/{courseId}")
+@Composable
+fun CourseDetailScreen(
+    courseId: String?,
+    viewModel: CourseDetailViewModel = viewModel()
+) { /* ... */ }
+```
+
+生成的 `CourseDetailScreenDestination` 只包含 `courseId`，调用页面时会省略 `viewModel`，
+从而继续使用原函数的默认注入表达式。
+
 如果 route 参数本身是 `@Serializable` 类型，建议先把 JSON payload 编码后再拼到运行时 query 里：
 
 ```kotlin
@@ -304,7 +351,9 @@ serialization 插件。
 data class Filter(val tab: String, val page: Int)
 
 val filter = serializeRouteQueryValue(Filter(tab = "post", page = 2))
-NavCenter.navigate("app://user/detail?filter=$filter")
+coroutineScope.launch {
+    NavCenter.navigate("app://user/detail?filter=$filter")
+}
 ```
 
 ## 页面返回值

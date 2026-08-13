@@ -1,6 +1,7 @@
 package com.aleyn.navigation.core.route
 
 import com.aleyn.navigation.core.intercept.NavUrlInterceptor
+import com.aleyn.navigation.core.intercept.InterceptResult
 import com.aleyn.navigation.core.navigator.NavBackStackController
 import com.aleyn.navigation.core.util.duplicateRouteDetails
 
@@ -19,6 +20,7 @@ object NavCenter {
 
     private val _registries = linkedSetOf<NavRegistry>()
     private val routeRegistryIndex = linkedMapOf<String, NavRegistry>()
+    private val routePatternRegistrations = mutableListOf<RoutePatternRegistration>()
 
     val registries: Set<NavRegistry> get() = _registries
 
@@ -50,9 +52,14 @@ object NavCenter {
         this._registries.clear()
         this._registries.addAll(registries)
         routeRegistryIndex.clear()
+        routePatternRegistrations.clear()
         registries.forEach { registry ->
             registry.routes.forEach { route ->
-                routeRegistryIndex[routeKey(route)] = registry
+                if (isRoutePattern(route)) {
+                    routePatternRegistrations += RoutePatternRegistration(route, registry)
+                } else {
+                    routeRegistryIndex[routeKey(route)] = registry
+                }
             }
         }
     }
@@ -60,6 +67,7 @@ object NavCenter {
     fun clearRegistries() {
         _registries.clear()
         routeRegistryIndex.clear()
+        routePatternRegistrations.clear()
     }
 
     fun setInterceptors(interceptors: List<NavUrlInterceptor>) {
@@ -75,14 +83,22 @@ object NavCenter {
         interceptors.clear()
     }
 
-    fun resolve(url: String): NavScreen? {
+    suspend fun resolve(url: String): NavScreen? {
         val finalUrl = interceptedUrl(url) ?: return null
         val parsedRouteUrl = parseRouteUrl(finalUrl)
-        val registry = routeRegistryIndex[parsedRouteUrl.routeKey] ?: return null
-        return registry.resolve(parsedRouteUrl)
+        routeRegistryIndex[parsedRouteUrl.routeKey]?.let { registry ->
+            return registry.resolve(parsedRouteUrl)
+        }
+
+        routePatternRegistrations.forEach { registration ->
+            val matchedRoute = matchRoutePattern(registration.route, parsedRouteUrl)
+                ?: return@forEach
+            return registration.registry.resolve(matchedRoute)
+        }
+        return null
     }
 
-    fun navigate(url: String): Boolean {
+    suspend fun navigate(url: String): Boolean {
         val screen = resolve(url) ?: return false
         backStack?.navigate(screen) ?: return false
         return true
@@ -100,11 +116,40 @@ object NavCenter {
         return true
     }
 
-    private fun interceptedUrl(url: String): String? {
-        var currentUrl: String? = url
-        interceptors.forEach { interceptor ->
-            currentUrl = currentUrl?.let(interceptor::intercept) ?: return null
+    fun needLogin(url: String): Boolean {
+        val parsedRouteUrl = parseRouteUrl(url)
+        return _registries.any { registry ->
+            registry.loginRoutes.any { route -> routePatternMatches(route, parsedRouteUrl) }
         }
-        return currentUrl
     }
+
+    private suspend fun interceptedUrl(url: String): String? {
+        var currentUrl = url
+        val visitedRoutes = linkedSetOf<String>()
+        var redirectCount = 0
+
+        redirectLoop@ while (true) {
+            if (!visitedRoutes.add(currentUrl)) return null
+
+            for (interceptor in interceptors.toList()) {
+                when (val result = interceptor.intercept(currentUrl)) {
+                    InterceptResult.Proceed -> Unit
+                    is InterceptResult.Block -> return null
+                    is InterceptResult.Redirect -> {
+                        if (++redirectCount > MAX_REDIRECTS) return null
+                        currentUrl = result.newRoute
+                        continue@redirectLoop
+                    }
+                }
+            }
+            return currentUrl
+        }
+    }
+
+    private data class RoutePatternRegistration(
+        val route: String,
+        val registry: NavRegistry
+    )
+
+    private const val MAX_REDIRECTS = 16
 }

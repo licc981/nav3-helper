@@ -20,6 +20,7 @@ sealed class MetaData {
         val funParams: List<KSValueParameter>,
         val route: String,
         val start: Boolean,
+        val needLogin: Boolean,
         val containingFile: KSFile,
     ) : MetaData()
 

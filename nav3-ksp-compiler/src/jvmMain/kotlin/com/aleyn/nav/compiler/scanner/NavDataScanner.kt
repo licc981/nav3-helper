@@ -48,6 +48,9 @@ class NavDataScanner(private val logger: KSPLogger) {
                 val start = (screenAnnotation?.arguments?.firstOrNull {
                     it.name?.asString() == Screen::start.name
                 }?.value).toString().toBooleanStrictOrNull() ?: false
+                val needLogin = (screenAnnotation?.arguments?.firstOrNull {
+                    it.name?.asString() == Screen::needLogin.name
+                }?.value).toString().toBooleanStrictOrNull() ?: false
 
                 if (route.isBlank()) {
                     return@mapNotNull MetaData.ScreenModel(
@@ -56,16 +59,9 @@ class NavDataScanner(private val logger: KSPLogger) {
                         funParams = functionDeclaration.parameters,
                         route = "",
                         start = start,
+                        needLogin = needLogin,
                         containingFile = functionDeclaration.containingFile!!
                     )
-                }
-
-                if ('{' in route || '}' in route) {
-                    logger.error(
-                        "@Screen route must be a fixed route key. Put dynamic values in the runtime query string instead of using placeholders.",
-                        functionDeclaration
-                    )
-                    return@mapNotNull null
                 }
 
                 if ('?' in route || '#' in route) {
@@ -87,6 +83,7 @@ class NavDataScanner(private val logger: KSPLogger) {
                     funParams = functionDeclaration.parameters,
                     route = route,
                     start = start,
+                    needLogin = needLogin,
                     containingFile = functionDeclaration.containingFile!!
                 )
             }
@@ -192,6 +189,32 @@ private fun validateRouteContract(route: String): String? {
 
     if (routeKey(route).isBlank()) {
         return "@Screen route must resolve to a non-blank key."
+    }
+
+    val normalizedRoute = routeKey(route)
+    val schemeIndex = normalizedRoute.indexOf("://")
+    val routePath = if (schemeIndex >= 0) {
+        val schemeAndAuthority = normalizedRoute.substring(0, schemeIndex + 3) +
+                normalizedRoute.substring(schemeIndex + 3).substringBefore('/')
+        if ('{' in schemeAndAuthority || '}' in schemeAndAuthority) {
+            return "@Screen route placeholders are only supported in path segments."
+        }
+        normalizedRoute.substring(schemeIndex + 3).substringAfter('/', "")
+    } else {
+        normalizedRoute
+    }
+    val pathSegments = routePath.split('/')
+    val placeholderNames = pathSegments
+        .filter { it.startsWith('{') && it.endsWith('}') }
+        .map { it.removePrefix("{").removeSuffix("}") }
+    if (pathSegments.any { ('{' in it || '}' in it) && !(it.startsWith('{') && it.endsWith('}')) }) {
+        return "@Screen route placeholders must occupy a complete path segment, for example '/users/{id}'."
+    }
+    if (placeholderNames.any { it.isBlank() || !it.first().isLetter() && it.first() != '_' || it.any { char -> !char.isLetterOrDigit() && char != '_' } }) {
+        return "@Screen route placeholder names must be valid Kotlin identifiers."
+    }
+    if (placeholderNames.size != placeholderNames.distinct().size) {
+        return "@Screen route placeholder names must be unique."
     }
 
     return null
