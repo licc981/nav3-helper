@@ -154,6 +154,19 @@ fun UserDetailScreen(id: Long) { /* ... */ }
 NavCenter.navigate("app://user/detail?id=123")
 ```
 
+如果 URL 没有注册，或已匹配的 route 因缺少/非法参数而无法还原 destination，可以设置应用级兜底：
+
+```kotlin
+NavCenter.setRouteNotFoundHandler { url ->
+    NotFoundScreenDestination(url)
+}
+```
+
+回调返回 `NavScreen` 时，`NavCenter.navigate(url)` 会把该兜底页面加入当前宿主返回栈；返回
+`null` 时仍会返回 `false`，因此也可以只在回调中记录日志。拦截器返回 `Block` 或发生重定向循环时
+不会触发此回调，避免绕过主动拦截。兜底 destination 自身仍需包含在当前宿主的 `entryProvider`
+中。可通过 `NavCenter.clearRouteNotFoundHandler()` 移除配置。
+
 ### 3. `@Serializable` 路由参数
 
 ```kotlin

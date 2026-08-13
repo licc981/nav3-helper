@@ -6,6 +6,13 @@ import com.aleyn.navigation.core.navigator.NavBackStackController
 import com.aleyn.navigation.core.util.duplicateRouteDetails
 
 /**
+ * Handles a URL that passed interception but could not be resolved by any registered route.
+ *
+ * Return a fallback destination to continue navigation, or `null` to keep the resolution failure.
+ */
+typealias RouteNotFoundHandler = (url: String) -> NavScreen?
+
+/**
  *  @author : Aleyn
  *  @date : 2026/2/25 16:36
  *
@@ -25,6 +32,8 @@ object NavCenter {
     val registries: Set<NavRegistry> get() = _registries
 
     private val interceptors = mutableListOf<NavUrlInterceptor>()
+
+    private var routeNotFoundHandler: RouteNotFoundHandler? = null
 
     internal fun attachHost(host: NavBackStackController) {
         backStack = host
@@ -83,19 +92,29 @@ object NavCenter {
         interceptors.clear()
     }
 
+    /** Sets the application-wide fallback for unresolved route URLs. */
+    fun setRouteNotFoundHandler(handler: RouteNotFoundHandler?) {
+        routeNotFoundHandler = handler
+    }
+
+    /** Removes the application-wide fallback for unresolved route URLs. */
+    fun clearRouteNotFoundHandler() {
+        routeNotFoundHandler = null
+    }
+
     fun resolve(url: String): NavScreen? {
         val finalUrl = interceptedUrl(url) ?: return null
         val parsedRouteUrl = parseRouteUrl(finalUrl)
         routeRegistryIndex[parsedRouteUrl.routeKey]?.let { registry ->
-            return registry.resolve(parsedRouteUrl)
+            return registry.resolve(parsedRouteUrl) ?: handleRouteNotFound(finalUrl)
         }
 
         routePatternRegistrations.forEach { registration ->
             val matchedRoute = matchRoutePattern(registration.route, parsedRouteUrl)
                 ?: return@forEach
-            return registration.registry.resolve(matchedRoute)
+            return registration.registry.resolve(matchedRoute) ?: handleRouteNotFound(finalUrl)
         }
-        return null
+        return handleRouteNotFound(finalUrl)
     }
 
     fun navigate(url: String): Boolean {
@@ -168,6 +187,10 @@ object NavCenter {
             }
             return currentUrl
         }
+    }
+
+    private fun handleRouteNotFound(url: String): NavScreen? {
+        return routeNotFoundHandler?.invoke(url)
     }
 
     private data class RoutePatternRegistration(

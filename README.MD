@@ -152,6 +152,21 @@ Navigate from any module through `NavCenter`:
 NavCenter.navigate("app://user/detail?id=123")
 ```
 
+Set an application-wide fallback when a URL is not registered, or when a matched route cannot
+restore its destination because of missing or invalid parameters:
+
+```kotlin
+NavCenter.setRouteNotFoundHandler { url ->
+    NotFoundScreenDestination(url)
+}
+```
+
+Returning a `NavScreen` makes `NavCenter.navigate(url)` add that fallback destination to the current
+host. Return `null` to keep the `false` result while using the callback only for logging. An
+interceptor `Block` or a redirect loop does not invoke this callback, so explicit interception is
+never bypassed. The fallback destination itself must still be included in the current host's
+`entryProvider`. Use `NavCenter.clearRouteNotFoundHandler()` to remove the configuration.
+
 ### 3. `@Serializable` route parameter
 
 ```kotlin

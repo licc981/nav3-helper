@@ -21,6 +21,7 @@ class NavCenterTest {
     @AfterTest
     fun cleanUp() {
         NavCenter.clearInterceptors()
+        NavCenter.clearRouteNotFoundHandler()
         NavCenter.clearRegistries()
         attachedHost?.let(NavCenter::detachHost)
         attachedHost = null
@@ -85,6 +86,46 @@ class NavCenterTest {
     }
 
     @Test
+    fun unresolved_route_uses_global_fallback_destination() {
+        val host = attachHost()
+        var unresolvedUrl: String? = null
+        NavCenter.setRegistries(setOf(TestRegistry))
+        NavCenter.setRouteNotFoundHandler { url ->
+            unresolvedUrl = url
+            TestNotFound(url)
+        }
+
+        assertTrue(NavCenter.navigate("https://www.myapp.com/missing"))
+        assertEquals("https://www.myapp.com/missing", unresolvedUrl)
+        assertEquals(TestNotFound("https://www.myapp.com/missing"), host.current)
+    }
+
+    @Test
+    fun registered_route_that_cannot_be_restored_uses_global_fallback() {
+        NavCenter.setRegistries(setOf(TestRegistry))
+        NavCenter.setRouteNotFoundHandler { TestNotFound(it) }
+
+        assertEquals(
+            TestNotFound("https://www.myapp.com/broken"),
+            NavCenter.resolve("https://www.myapp.com/broken")
+        )
+    }
+
+    @Test
+    fun blocked_route_does_not_invoke_not_found_fallback() {
+        var fallbackCalled = false
+        NavCenter.setRegistries(setOf(TestRegistry))
+        NavCenter.addInterceptor { InterceptResult.Block("blocked") }
+        NavCenter.setRouteNotFoundHandler {
+            fallbackCalled = true
+            TestNotFound(it)
+        }
+
+        assertNull(NavCenter.resolve("https://www.myapp.com/missing"))
+        assertFalse(fallbackCalled)
+    }
+
+    @Test
     fun stack_operations_return_false_without_an_attached_host() {
         assertFalse(NavCenter.goBack(TestPublic))
         assertFalse(NavCenter.replace(TestPublic))
@@ -129,7 +170,8 @@ class NavCenterTest {
 private object TestRegistry : NavRegistry {
     override val routes = setOf(
         "https://www.myapp.com/users/{filter}/{id}",
-        "https://www.myapp.com/public"
+        "https://www.myapp.com/public",
+        "https://www.myapp.com/broken"
     )
     override val loginRoutes = setOf("https://www.myapp.com/users/{filter}/{id}")
 
@@ -149,3 +191,4 @@ private object TestRegistry : NavRegistry {
 
 private data class TestUser(val filter: String, val id: String) : NavScreen
 private data object TestPublic : NavScreen
+private data class TestNotFound(val url: String) : NavScreen
