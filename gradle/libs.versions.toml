@@ -10,7 +10,7 @@ composeMultiplatform = "1.10.3"
 kotlinpoetVersion = "2.3.0"
 serializationJson = "1.11.0"
 
-navHelper = "1.0.3"
+navHelper = "1.0.4"
 
 [libraries]
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
