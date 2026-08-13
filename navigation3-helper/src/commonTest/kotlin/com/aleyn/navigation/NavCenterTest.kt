@@ -7,9 +7,6 @@ import com.aleyn.navigation.core.route.NavCenter
 import com.aleyn.navigation.core.route.NavRegistry
 import com.aleyn.navigation.core.route.NavScreen
 import com.aleyn.navigation.core.route.ParsedRouteUrl
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.coroutines.startCoroutine
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -26,7 +23,7 @@ class NavCenterTest {
     }
 
     @Test
-    fun template_route_resolves_path_parameters_and_login_metadata() = runSuspend {
+    fun template_route_resolves_path_parameters_and_login_metadata() {
         NavCenter.setRegistries(setOf(TestRegistry))
 
         assertTrue(NavCenter.needLogin("https://www.myapp.com/users/active/42"))
@@ -38,7 +35,7 @@ class NavCenterTest {
     }
 
     @Test
-    fun block_stops_resolution_and_subsequent_interceptors() = runSuspend {
+    fun block_stops_resolution_and_subsequent_interceptors() {
         NavCenter.setRegistries(setOf(TestRegistry))
         var subsequentCalled = false
         NavCenter.setInterceptors(
@@ -56,7 +53,7 @@ class NavCenterTest {
     }
 
     @Test
-    fun redirect_restarts_interceptor_chain_for_new_route() = runSuspend {
+    fun redirect_restarts_interceptor_chain_for_new_route() {
         NavCenter.setRegistries(setOf(TestRegistry))
         val interceptedUrls = mutableListOf<String>()
         NavCenter.addInterceptor { url ->
@@ -76,7 +73,7 @@ class NavCenterTest {
     }
 
     @Test
-    fun redirect_loop_is_blocked() = runSuspend {
+    fun redirect_loop_is_blocked() {
         NavCenter.setRegistries(setOf(TestRegistry))
         NavCenter.addInterceptor { url -> InterceptResult.Redirect(url) }
 
@@ -107,15 +104,3 @@ private object TestRegistry : NavRegistry {
 
 private data class TestUser(val filter: String, val id: String) : NavScreen
 private data object TestPublic : NavScreen
-
-private fun <T> runSuspend(block: suspend () -> T): T {
-    var outcome: Result<T>? = null
-    block.startCoroutine(object : Continuation<T> {
-        override val context = EmptyCoroutineContext
-
-        override fun resumeWith(result: Result<T>) {
-            outcome = result
-        }
-    })
-    return checkNotNull(outcome) { "Test coroutine did not complete synchronously" }.getOrThrow()
-}

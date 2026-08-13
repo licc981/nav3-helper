@@ -83,7 +83,7 @@ object NavCenter {
         interceptors.clear()
     }
 
-    suspend fun resolve(url: String): NavScreen? {
+    fun resolve(url: String): NavScreen? {
         val finalUrl = interceptedUrl(url) ?: return null
         val parsedRouteUrl = parseRouteUrl(finalUrl)
         routeRegistryIndex[parsedRouteUrl.routeKey]?.let { registry ->
@@ -98,7 +98,7 @@ object NavCenter {
         return null
     }
 
-    suspend fun navigate(url: String): Boolean {
+    fun navigate(url: String): Boolean {
         val screen = resolve(url) ?: return false
         backStack?.navigate(screen) ?: return false
         return true
@@ -123,7 +123,7 @@ object NavCenter {
         }
     }
 
-    private suspend fun interceptedUrl(url: String): String? {
+    private fun interceptedUrl(url: String): String? {
         var currentUrl = url
         val visitedRoutes = linkedSetOf<String>()
         var redirectCount = 0

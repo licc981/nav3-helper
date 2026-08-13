@@ -149,9 +149,7 @@ fun UserDetailScreen(id: Long) { /* ... */ }
 然后任意模块都可以通过 `NavCenter` 跳转：
 
 ```kotlin
-coroutineScope.launch {
-    NavCenter.navigate("app://user/detail?id=123")
-}
+NavCenter.navigate("app://user/detail?id=123")
 ```
 
 ### 3. `@Serializable` 路由参数
@@ -174,9 +172,7 @@ fun MeScreen(userInfo: UserInfo) { /* ... */ }
 val userInfoParam = serializeRouteQueryValue(
     UserInfo(userId = "1001", nickname = "Aleyn")
 )
-coroutineScope.launch {
-    NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
-}
+NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
 ```
 
 ### 4. 页面返回值
@@ -264,13 +260,12 @@ fun UserDetailScreen(
 运行时跳转：
 
 ```kotlin
-coroutineScope.launch {
-    NavCenter.navigate("https://www.myapp.com/users/active/123")
-}
+NavCenter.navigate("https://www.myapp.com/users/active/123")
 ```
 
-上面的 URL 最终恢复为 `filter = "active"`、`id = 123L`。`NavCenter.navigate(String)` 和
-`NavCenter.resolve(String)` 都是 suspend API，因为拦截器可以执行异步登录检查或网络操作。
+上面的 URL 最终恢复为 `filter = "active"`、`id = 123L`。`NavCenter.navigate(String)`、
+`NavCenter.resolve(String)` 和拦截器都是同步 API，可以直接在点击回调中调用。需要异步获取的
+数据应在调用导航前准备完成。
 
 ### 登录和拦截器
 
@@ -351,9 +346,7 @@ fun CourseDetailScreen(
 data class Filter(val tab: String, val page: Int)
 
 val filter = serializeRouteQueryValue(Filter(tab = "post", page = 2))
-coroutineScope.launch {
-    NavCenter.navigate("app://user/detail?filter=$filter")
-}
+NavCenter.navigate("app://user/detail?filter=$filter")
 ```
 
 ## 页面返回值

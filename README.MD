@@ -147,9 +147,7 @@ fun UserDetailScreen(id: Long) { /* ... */ }
 Navigate from any module through `NavCenter`:
 
 ```kotlin
-coroutineScope.launch {
-    NavCenter.navigate("app://user/detail?id=123")
-}
+NavCenter.navigate("app://user/detail?id=123")
 ```
 
 ### 3. `@Serializable` route parameter
@@ -172,9 +170,7 @@ Runtime navigation:
 val userInfoParam = serializeRouteQueryValue(
     UserInfo(userId = "1001", nickname = "Aleyn")
 )
-coroutineScope.launch {
-    NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
-}
+NavCenter.navigate("app://user/me?userInfo=$userInfoParam")
 ```
 
 ### 4. Page result callback
@@ -264,14 +260,12 @@ fun UserDetailScreen(
 Navigate at runtime with:
 
 ```kotlin
-coroutineScope.launch {
-    NavCenter.navigate("https://www.myapp.com/users/active/123")
-}
+NavCenter.navigate("https://www.myapp.com/users/active/123")
 ```
 
-This URL restores `filter = "active"` and `id = 123L`. `NavCenter.navigate(String)` and
-`NavCenter.resolve(String)` are suspend APIs because interceptors may perform asynchronous login
-checks or network operations.
+This URL restores `filter = "active"` and `id = 123L`. `NavCenter.navigate(String)`,
+`NavCenter.resolve(String)`, and interceptors are synchronous APIs and can be called directly from
+click handlers. Data requiring asynchronous work should be prepared before navigation.
 
 ### Login and interceptors
 
@@ -354,9 +348,7 @@ URL query string:
 data class Filter(val tab: String, val page: Int)
 
 val filter = serializeRouteQueryValue(Filter(tab = "post", page = 2))
-coroutineScope.launch {
-    NavCenter.navigate("app://user/detail?filter=$filter")
-}
+NavCenter.navigate("app://user/detail?filter=$filter")
 ```
 
 ## Page Results

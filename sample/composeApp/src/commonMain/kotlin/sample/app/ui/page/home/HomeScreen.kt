@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -18,7 +17,6 @@ import com.aleyn.navigation.core.navigator.LocalNavBackStackState
 import com.aleyn.navigation.core.route.NavCenter
 import com.aleyn.navigation.core.route.serializeRouteQueryValue
 import sample.app.ui.page.me.UserInfo
-import kotlinx.coroutines.launch
 
 /**
  * @author : Aleyn
@@ -32,7 +30,6 @@ fun HomeScreen(
 ) {
 
     val backState = LocalNavBackStackState.current
-    val coroutineScope = rememberCoroutineScope()
 
     Column(
         Modifier.fillMaxSize(),
@@ -49,9 +46,7 @@ fun HomeScreen(
             )
 
             val userInfoParam = serializeRouteQueryValue(userInfo)
-            coroutineScope.launch {
-                NavCenter.navigate("https://www.app.cn/compose-app/me?userInfo=${userInfoParam}")
-            }
+            NavCenter.navigate("https://www.app.cn/compose-app/me?userInfo=${userInfoParam}")
 
             //or
             //backState.navigate(MeScreenDestination(userInfo))

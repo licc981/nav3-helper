@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,7 +19,6 @@ import com.aleyn.navigation.core.navigator.consumeResult
 import com.aleyn.navigation.core.navigator.consumeResultEffect
 import com.aleyn.navigation.core.navigator.peekResult
 import com.aleyn.navigation.core.route.NavCenter
-import kotlinx.coroutines.launch
 
 /**
  * @author: Aleyn
@@ -33,7 +31,6 @@ import kotlinx.coroutines.launch
 fun FirstHomeScreen() {
 
     val backStack = LocalNavBackStackState.current
-    val coroutineScope = rememberCoroutineScope()
 
     var resultData by remember { mutableStateOf("") }
 
@@ -56,9 +53,7 @@ fun FirstHomeScreen() {
 
         Button(onClick = {
             // 跨模块只能通过 router 方式 跳转
-            coroutineScope.launch {
-                NavCenter.navigate("https://www.app.cn/child-second/main")
-            }
+            NavCenter.navigate("https://www.app.cn/child-second/main")
         }) {
             Text(text = "Go ChildSecondModule")
         }

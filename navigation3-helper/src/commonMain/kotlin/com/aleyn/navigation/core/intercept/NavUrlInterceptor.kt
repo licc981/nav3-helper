@@ -6,7 +6,7 @@ package com.aleyn.navigation.core.intercept
  * @date: 2026/04/22 10:44
  */
 fun interface NavUrlInterceptor {
-    suspend fun intercept(url: String): InterceptResult
+    fun intercept(url: String): InterceptResult
 }
 
 sealed class InterceptResult {
