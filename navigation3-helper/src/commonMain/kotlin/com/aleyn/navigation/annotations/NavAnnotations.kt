@@ -30,11 +30,20 @@ package com.aleyn.navigation.annotations
  *
  * When [needLogin] is true, the generated destination and registry metadata mark this screen as
  * requiring authentication. Interceptors can inspect that metadata through `NavCenter.needLogin`.
+ *
+ * When [multiInstance] is true, the generated destination carries a runtime-unique `entryId`
+ * for every navigation instance, so the same route with the same parameters can be pushed onto
+ * the back stack multiple times, each instance keeping its own content state. Keep it false for
+ * screens that should be unique per route (the default).
+ *
+ * Note: the value must be a compile-time constant, so per-instance uniqueness is generated at
+ * runtime inside the destination class instead of being declared here.
  */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.FUNCTION)
 annotation class Screen(
     val route: String = "",
     val start: Boolean = false,
-    val needLogin: Boolean = false
+    val needLogin: Boolean = false,
+    val multiInstance: Boolean = false
 )

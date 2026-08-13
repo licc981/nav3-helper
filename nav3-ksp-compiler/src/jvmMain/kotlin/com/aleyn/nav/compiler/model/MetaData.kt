@@ -21,6 +21,7 @@ sealed class MetaData {
         val route: String,
         val start: Boolean,
         val needLogin: Boolean,
+        val multiInstance: Boolean,
         val containingFile: KSFile,
     ) : MetaData()
 

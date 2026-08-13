@@ -311,6 +311,31 @@ NavCenter.addInterceptor { url ->
 fun LocalOnlyScreen() { /* ... */ }
 ```
 
+### 多实例页面（multiInstance）
+
+同一路由 + 同一参数连续入栈两次时，navigation3 会用 `key.toString()` 推导
+`NavEntry.contentKey` 并复用内容槽，导致第二次入栈看起来"没有生效"。为此提供
+`multiInstance` 开关：
+
+```kotlin
+@Screen(route = Routes.COURSE_DETAIL, multiInstance = true)
+@Composable
+fun CourseDetailScreen(courseId: Long) { /* ... */ }
+```
+
+开启后，生成的 Destination 会自动增加一个运行时生成的 `entryId` 主构造参数（默认值
+`newScreenEntryId()`，由进程内单调时钟 + 自增序列 + 随机数组合而成），每次入栈都会得到
+不同的 `contentKey`，从而允许同一路由 + 同一参数正常入栈多次。
+
+设计说明：
+
+- 不能在注解里写 `entryId = UUID.randomUUID().toString()`：注解参数必须是编译期常量，
+  且注解值附着在函数声明上只有一份，无法区分运行时每次入栈的实例。
+- 生成的 `equals`/`hashCode` 会忽略 `entryId`，只按业务参数匹配，因此
+  `goBack(url)` / `remove(url)` 等按 URL 结构化查找的 API 不受影响。
+- 页面参数名 `entryId` 为保留字，请勿在 composable 参数中占用。
+- 默认关闭，普通页面不受影响。
+
 ## 当前参数支持范围
 
 URL query 恢复更适合轻量公开参数。

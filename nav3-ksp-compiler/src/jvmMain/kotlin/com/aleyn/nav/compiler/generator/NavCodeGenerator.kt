@@ -26,6 +26,7 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.BOOLEAN
+import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.asTypeName
@@ -112,16 +113,27 @@ class NavCodeGenerator(
 
         val defaultValueImports = linkedSetOf<String>()
         val navigationParameters = screen.navigationParameters(resolver)
+        if (screen.multiInstance &&
+            navigationParameters.any { it.name?.asString() == ENTRY_ID_PARAMETER_NAME }
+        ) {
+            throw RuntimeException(
+                "Screen '${screen.simpleName}' declares a parameter named 'entryId', " +
+                        "which is reserved by multiInstance screens. Rename the parameter."
+            )
+        }
 
-        val genFunMaps = buildMap {
-            navigationParameters.forEach { parameter ->
-                createScreenParameter(
-                    resolver = resolver,
-                    screen = screen,
-                    parameter = parameter,
-                    defaultValueImports = defaultValueImports
-                )
-            }
+        val genFunMaps = linkedMapOf<ParameterSpec, PropertySpec>()
+        navigationParameters.forEach { parameter ->
+            genFunMaps.createScreenParameter(
+                resolver = resolver,
+                screen = screen,
+                parameter = parameter,
+                defaultValueImports = defaultValueImports
+            )
+        }
+        if (screen.multiInstance) {
+            val (entryIdParameter, entryIdProperty) = buildEntryIdParameter()
+            genFunMaps[entryIdParameter] = entryIdProperty
         }
 
         val classSpec = if (genFunMaps.isNotEmpty()) {
@@ -147,6 +159,14 @@ class NavCodeGenerator(
                 .initializer("%L", screen.needLogin)
                 .build()
         )
+
+        if (screen.multiInstance) {
+            val structuralFields = navigationParameters.mapNotNull { it.name?.asString() }
+            classSpec.addFunction(
+                buildEntryIdIgnoringEquals(ClassName(pkgName, className), structuralFields)
+            )
+            classSpec.addFunction(buildEntryIdIgnoringHashCode(structuralFields))
+        }
 
         logger.info("gen :$pkgName.$className")
 
@@ -184,7 +204,7 @@ internal fun buildRegistryFileSpec(
     screenList.singleOrNull { it.start }?.let { startScreen ->
         val startClass = startScreen.generatedClassName(fileSuffix)
         val startProperty = PropertySpec.builder("defaultStartScreen", startClass)
-            .initializer("%T", startClass)
+            .initializer(if (startScreen.multiInstance) "%T()" else "%T", startClass)
             .build()
         classSpec.addProperty(startProperty)
     }
@@ -381,7 +401,10 @@ private fun buildRouteDestinationCode(
 ): CodeBlock {
     val navigationParameters = screen.navigationParameters(resolver)
     if (navigationParameters.isEmpty()) {
-        return CodeBlock.of("%T", screen.generatedClassName(fileSuffix))
+        return CodeBlock.of(
+            if (screen.multiInstance) "%T()" else "%T",
+            screen.generatedClassName(fileSuffix)
+        )
     }
 
     val arguments = navigationParameters.joinToString(",\n") { parameter ->
@@ -552,6 +575,89 @@ private fun MutableMap<ParameterSpec, PropertySpec>.createScreenParameter(
         .build()
 
     put(parameterSpec, propertySpec)
+}
+
+internal const val ENTRY_ID_PARAMETER_NAME = "entryId"
+
+private val newScreenEntryIdMember = MemberName(
+    "com.aleyn.navigation.core.route",
+    "newScreenEntryId"
+)
+
+/**
+ * Builds the `entryId` primary-constructor parameter for multi-instance destinations.
+ *
+ * The default value calls [newScreenEntryIdMember] at construction time, so every navigation
+ * instance (each call to `resolve`, and every direct constructor call that omits `entryId`) gets a
+ * unique id. Because the parameter is part of the data class primary constructor, `toString()`
+ * includes it, which makes `NavEntry.contentKey` (defaults to `key.toString()`) unique per push and
+ * lets navigation3 treat two pushes of the same route as independent content.
+ */
+internal fun buildEntryIdParameter(): Pair<ParameterSpec, PropertySpec> {
+    val parameterSpec = ParameterSpec.builder(ENTRY_ID_PARAMETER_NAME, STRING)
+        .defaultValue("%M()", newScreenEntryIdMember)
+        .build()
+    val propertySpec = PropertySpec.builder(ENTRY_ID_PARAMETER_NAME, STRING)
+        .initializer(ENTRY_ID_PARAMETER_NAME)
+        .build()
+    return parameterSpec to propertySpec
+}
+
+/**
+ * Generates an `equals` that ignores [ENTRY_ID_PARAMETER_NAME], so URL-based operations such as
+ * `NavCenter.goBack(url)` / `remove(url)` still match structurally (a fresh `resolve` produces a
+ * new random entryId that must not prevent matching an entry on the stack).
+ */
+internal fun buildEntryIdIgnoringEquals(
+    className: ClassName,
+    structuralFields: List<String>
+): FunSpec {
+    return FunSpec.builder("equals")
+        .addModifiers(KModifier.OVERRIDE)
+        .returns(BOOLEAN)
+        .addParameter("other", Any::class.asClassName().copy(nullable = true))
+        .addCode(
+            CodeBlock.builder()
+                .beginControlFlow("if (this === other)")
+                .addStatement("return true")
+                .endControlFlow()
+                .beginControlFlow("if (other == null || other !is %T)", className)
+                .addStatement("return false")
+                .endControlFlow()
+                .build()
+        )
+        .apply {
+            if (structuralFields.isEmpty()) {
+                addStatement("return true")
+            } else {
+                addStatement(
+                    "return %L",
+                    structuralFields.joinToString(" && ") { "other.$it == this.$it" }
+                )
+            }
+        }
+        .build()
+}
+
+/**
+ * Generates a `hashCode` consistent with [buildEntryIdIgnoringEquals] (entryId excluded).
+ */
+internal fun buildEntryIdIgnoringHashCode(structuralFields: List<String>): FunSpec {
+    return FunSpec.builder("hashCode")
+        .addModifiers(KModifier.OVERRIDE)
+        .returns(INT)
+        .apply {
+            if (structuralFields.isEmpty()) {
+                addStatement("return 0")
+            } else {
+                addStatement("var result = %L.hashCode()", structuralFields.first())
+                structuralFields.drop(1).forEach { field ->
+                    addStatement("result = 31 * result + %L.hashCode()", field)
+                }
+                addStatement("return result")
+            }
+        }
+        .build()
 }
 
 private fun MetaData.ScreenModel.navigationParameters(

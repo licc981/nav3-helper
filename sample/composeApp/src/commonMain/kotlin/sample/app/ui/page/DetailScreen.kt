@@ -15,7 +15,7 @@ import com.aleyn.navigation.annotations.Screen
  */
 
 
-@Screen(route = "https://www.app.cn/users/{filter}/{id}", needLogin = true)
+@Screen(route = "https://www.app.cn/users/{filter}/{id}", needLogin = true, multiInstance = true)
 @Composable
 fun DetailScreen(
     filter: String,

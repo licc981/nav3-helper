@@ -40,6 +40,15 @@ fun MainScreen() {
         }
 
         Button(onClick = {
+            // multiInstance screen: 同一路由+同一参数连续入栈两次，
+            // 每次实例持有独立的 entryId，两个页面互不共享状态
+            NavCenter.navigate("https://www.app.cn/users/active/110")
+            NavCenter.navigate("https://www.app.cn/users/active/110")
+        }) {
+            Text(text = "Push Detail twice")
+        }
+
+        Button(onClick = {
             NavCenter.navigate("https://www.app.cn/compose-app/home")
             //or
 //            NavCenter.navigate(HomeScreenDestination)

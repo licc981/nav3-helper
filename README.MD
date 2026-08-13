@@ -313,6 +313,33 @@ Ordinary local screen:
 fun LocalOnlyScreen() { /* ... */ }
 ```
 
+### Multi-instance screens (`multiInstance`)
+
+When the same route with the same arguments is pushed twice in a row, navigation3 derives
+`NavEntry.contentKey` from `key.toString()` and reuses the same content slot, so the second push
+appears to do nothing. The `multiInstance` flag solves this:
+
+```kotlin
+@Screen(route = Routes.COURSE_DETAIL, multiInstance = true)
+@Composable
+fun CourseDetailScreen(courseId: Long) { /* ... */ }
+```
+
+When enabled, the generated Destination gets an extra runtime-generated `entryId` primary
+constructor parameter (defaulting to `newScreenEntryId()`, a combination of the process
+monotonic clock, an in-process counter and randomness), so every push produces a distinct
+`contentKey` and the same route + same arguments can be pushed multiple times.
+
+Design notes:
+
+- You cannot write `entryId = UUID.randomUUID().toString()` in the annotation: annotation
+  arguments must be compile-time constants, and an annotation value attached to a function
+  declaration is a single value that cannot distinguish runtime push instances.
+- The generated `equals`/`hashCode` ignore `entryId` and match only on business parameters,
+  so URL-structural APIs like `goBack(url)` / `remove(url)` keep working.
+- `entryId` is a reserved parameter name on screen composables.
+- Disabled by default; ordinary screens are unaffected.
+
 ## Current Parameter Support
 
 URL query restoration is intended for lightweight public parameters.

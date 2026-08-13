@@ -51,6 +51,9 @@ class NavDataScanner(private val logger: KSPLogger) {
                 val needLogin = (screenAnnotation?.arguments?.firstOrNull {
                     it.name?.asString() == Screen::needLogin.name
                 }?.value).toString().toBooleanStrictOrNull() ?: false
+                val multiInstance = (screenAnnotation?.arguments?.firstOrNull {
+                    it.name?.asString() == Screen::multiInstance.name
+                }?.value).toString().toBooleanStrictOrNull() ?: false
 
                 if (route.isBlank()) {
                     return@mapNotNull MetaData.ScreenModel(
@@ -60,6 +63,7 @@ class NavDataScanner(private val logger: KSPLogger) {
                         route = "",
                         start = start,
                         needLogin = needLogin,
+                        multiInstance = multiInstance,
                         containingFile = functionDeclaration.containingFile!!
                     )
                 }
@@ -84,6 +88,7 @@ class NavDataScanner(private val logger: KSPLogger) {
                     route = route,
                     start = start,
                     needLogin = needLogin,
+                    multiInstance = multiInstance,
                     containingFile = functionDeclaration.containingFile!!
                 )
             }
