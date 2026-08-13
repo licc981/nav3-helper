@@ -23,6 +23,59 @@ has_property() {
   [[ -f "$gradle_properties" ]] && grep -Eq "^[[:space:]]*${property_name}[[:space:]]*=" "$gradle_properties"
 }
 
+read_property() {
+  local property_name="$1"
+  local environment_name="ORG_GRADLE_PROJECT_${property_name}"
+
+  if [[ -n "${!environment_name:-}" ]]; then
+    printf '%s' "${!environment_name}"
+    return
+  fi
+
+  sed -nE "s/^[[:space:]]*${property_name}[[:space:]]*=[[:space:]]*(.*)$/\\1/p" "$gradle_properties" | head -n 1
+}
+
+configure_signing_properties() {
+  local signing_key
+  local signing_key_id
+  local signing_key_password
+  local signing_gpg_home
+  signing_key="$(read_property signingInMemoryKey)"
+  signing_key="${signing_key//\\n/$'\n'}"
+  signing_key_password="$(read_property signingInMemoryKeyPassword)"
+
+  if has_property signingInMemoryKeyId; then
+    signing_key_id="$(read_property signingInMemoryKeyId)"
+  else
+    if ! command -v gpg >/dev/null 2>&1; then
+      echo "GPG is required to derive signingInMemoryKeyId from signingInMemoryKey." >&2
+      exit 1
+    fi
+
+    signing_gpg_home="$(mktemp -d "${TMPDIR:-/tmp}/nav3-signing.XXXXXX")"
+    chmod 700 "$signing_gpg_home"
+    signing_key_id="$(
+      printf '%s\n' "$signing_key" |
+        gpg --homedir "$signing_gpg_home" --batch --with-colons \
+          --import-options show-only --import 2>/dev/null |
+        awk -F: '$1 == "sec" { print $5; exit }'
+    )" || signing_key_id=""
+    rm -rf "$signing_gpg_home"
+  fi
+
+  if [[ -z "$signing_key_id" ]]; then
+    echo "Could not derive a key ID from signingInMemoryKey." >&2
+    echo "Ensure it contains a valid ASCII-armored GPG private key." >&2
+    exit 1
+  fi
+
+  gradle_signing_args=(
+    "-PsigningInMemoryKey=$signing_key"
+    "-PsigningInMemoryKeyId=$signing_key_id"
+    "-PsigningInMemoryKeyPassword=$signing_key_password"
+  )
+}
+
 if [[ $# -ne 1 || -z "$1" ]]; then
   usage
   exit 2
@@ -82,6 +135,9 @@ if (( ${#missing_properties[@]} > 0 )); then
   exit 1
 fi
 
+gradle_signing_args=()
+configure_signing_properties
+
 cd "$project_dir"
 
 bash ./gradlew \
@@ -90,4 +146,4 @@ bash ./gradlew \
   :navigation3-helper:generatePomFileForKotlinMultiplatformPublication \
   :nav3-ksp-compiler:generatePomFileForKotlinMultiplatformPublication
 
-bash ./gradlew publishAndReleaseToMavenCentral
+bash ./gradlew "${gradle_signing_args[@]}" publishAndReleaseToMavenCentral

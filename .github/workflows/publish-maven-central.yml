@@ -1,6 +1,11 @@
 name: Publish to Maven Central
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - gradle/libs.versions.toml
   workflow_dispatch:
     inputs:
       version:
@@ -17,7 +22,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Publish ${{ inputs.version }}
+    name: Publish ${{ inputs.version || 'configured version' }}
     runs-on: macos-latest
     timeout-minutes: 45
 
@@ -36,10 +41,15 @@ jobs:
 
       - name: Publish and release
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
-        run: bash scripts/publish-maven-central.sh "$RELEASE_VERSION"
+        run: |
+          if [[ -n "$REQUESTED_VERSION" ]]; then
+            release_version="$REQUESTED_VERSION"
+          else
+            release_version="$(sed -nE 's/^navHelper[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' gradle/libs.versions.toml)"
+          fi
+          bash scripts/publish-maven-central.sh "$release_version"

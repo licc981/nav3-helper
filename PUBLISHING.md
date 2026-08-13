@@ -18,11 +18,11 @@
 | `MAVEN_CENTRAL_USERNAME` | Central Portal User Token 的 username |
 | `MAVEN_CENTRAL_PASSWORD` | Central Portal User Token 的 password |
 | `SIGNING_IN_MEMORY_KEY` | ASCII-armored GPG 私钥全文 |
-| `SIGNING_IN_MEMORY_KEY_ID` | GPG key ID，建议填写最后 8 位 |
 | `SIGNING_IN_MEMORY_KEY_PASSWORD` | GPG 私钥密码 |
 
 `SIGNING_IN_MEMORY_KEY` 必须包含 `BEGIN PGP PRIVATE KEY BLOCK` 和
 `END PGP PRIVATE KEY BLOCK` 两行。Secret 只保存在 GitHub，不应写入 Git、工作流或项目配置。
+发布脚本会从私钥自动读取 key ID，不需要单独维护对应的 Secret。
 
 首次设置或凭据轮换：
 
@@ -30,9 +30,11 @@
    namespace 已验证，并创建 User Token。
 2. 准备 GPG 私钥。已有密钥可执行
    `gpg --armor --export-secret-keys <KEY_ID>` 导出用于 GitHub Secret 的文本。
-3. 将上述五项 Repository secrets 配置到 GitHub。
+3. 将上述四项 Repository secrets 配置到 GitHub。
 4. 在 `gradle/libs.versions.toml` 更新 `navHelper`，提交并推送到 `main`。
-5. 打开 GitHub 仓库的 `Actions > Publish to Maven Central > Run workflow`，输入同一版本号。
+
+推送到 `main` 且发布相关文件发生变化时，工作流会自动读取 `navHelper` 并发布。也可以打开
+`Actions > Publish to Maven Central > Run workflow` 手动触发，输入的版本必须与 `navHelper` 一致。
 
 工作流在 macOS runner 上构建 iOS/JVM/Wasm 产物，运行两模块 JVM 测试、生成 POM，随后上传并
 自动发布。输入版本与项目版本不一致时会直接终止。
@@ -46,8 +48,9 @@
 mavenCentralUsername=<portal-token-username>
 mavenCentralPassword=<portal-token-password>
 signingInMemoryKey=<ASCII-armored-private-key-with-newlines>
-signingInMemoryKeyId=<optional-key-id>
 signingInMemoryKeyPassword=<gpg-key-password>
+# 可选；省略时发布脚本会从 signingInMemoryKey 自动读取
+signingInMemoryKeyId=<key-id>
 ```
 
 在 `.properties` 文件中，私钥换行需表示为 `\n`。更简单的方式是通过下面的环境变量传入
@@ -59,8 +62,9 @@ signingInMemoryKeyPassword=<gpg-key-password>
 ORG_GRADLE_PROJECT_mavenCentralUsername
 ORG_GRADLE_PROJECT_mavenCentralPassword
 ORG_GRADLE_PROJECT_signingInMemoryKey
-ORG_GRADLE_PROJECT_signingInMemoryKeyId
 ORG_GRADLE_PROJECT_signingInMemoryKeyPassword
+# 可选；省略时发布脚本会从 signingInMemoryKey 自动读取
+ORG_GRADLE_PROJECT_signingInMemoryKeyId
 ```
 
 更新 `navHelper` 后执行：
