@@ -103,7 +103,7 @@ object NavCenter {
     }
 
     fun resolve(url: String): NavScreen? {
-        val finalUrl = interceptedUrl(url) ?: return handleRouteNotFound(url)
+        val finalUrl = interceptedUrl(url) ?: return null
         return findNavScreen(finalUrl) ?: handleRouteNotFound(finalUrl)
     }
 
